@@ -1,42 +1,74 @@
 <template>
   <div>
     <el-row>
-      <el-input v-model="search" placeholder="请输入姓名" style="width: 200px;margin-right: 20px" @keyup.enter.native="searchByName(search)"></el-input>
-      <el-button type="primary" icon="el-icon-search" style="padding-left:10px" @click="searchByName(search)">搜索</el-button>
-      <el-button type="primary" @click="dialogVisible_add = true">新增</el-button>
+      <el-input v-model="search" placeholder="请输入姓名" style="width: 200px;margin-right: 10px" @keyup.enter.native="searchByName(search)"></el-input>
+      <el-button type="primary" icon="el-icon-search"  @click="searchByName(search)">搜索</el-button>
+      <el-button type="primary" icon="el-icon-plus" @click="dialogVisible_add = true" style="margin-left: 20px">新增</el-button>
     </el-row>
 
     <el-divider></el-divider>
     <el-table
         :data="tableData"
 
-        style="width: 600px">
+        style="width: 1000px">
       <el-table-column
           fixed
-          prop="id"
+          prop="userId"
           label="编号"
           width="150"
           sortable>
       </el-table-column>
       <el-table-column
-          prop="name"
+          prop="userName"
           label="姓名"
           width="120"
           sortable>
       </el-table-column>
       <el-table-column
-          prop="pwd"
-          label="密码"
+          prop="roleName"
+          label="角色"
+          width="120">
+      </el-table-column>
+      <el-table-column
+          prop="state"
+          label="状态"
+          width="120">
+      </el-table-column>
+      <el-table-column
+          prop="lastLoginTime"
+          label="上次登录时间"
           width="120">
       </el-table-column>
 
       <el-table-column
           fixed="right"
-          label="操作"
-          width="200">
+          label="操作[编辑用户/禁用/其它操作]"
+          align="center"
+          width="300">
         <template slot-scope="scope">
-          <el-button size="mini" @click="dialogVisible_update = true;currentRow=scope.row">编辑</el-button>
-          <el-button type="danger" size="mini" @click="handleDelete(scope.row)">删除</el-button>
+          <el-button size="mini" @click="dialogVisible_update = true;currentRow=scope.row">
+            <i class="el-icon-edit"></i>
+          </el-button>
+          <el-button size="mini" @click="currentRow=scope.row">
+            <i class="el-icon-lock"></i>
+          </el-button>
+          <el-dropdown style="margin-left: 20px">
+              <span class="el-dropdown-link">
+                <i class="el-icon-more"></i>
+              </span>
+            <el-dropdown-menu slot="dropdown">
+              <el-dropdown-item >
+                <el-button type="text" @click="dialogVisible_role = true;currentRow=scope.row">角色定义</el-button>
+              </el-dropdown-item>
+              <el-dropdown-item>
+                <el-button type="text" @click="dialogVisible_pwd = true;currentRow=scope.row">重置密码</el-button>
+              </el-dropdown-item>
+              <el-dropdown-item>
+                <el-button type="text" @click="handleDelete(scope.row)">删除</el-button>
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </el-dropdown>
+
         </template>
       </el-table-column>
     </el-table>
@@ -87,14 +119,11 @@
         :before-close="handleClose">
         <span>
           <el-form :model="updateForm" :rules="rules" ref="updateForm" label-width="100px" class="demo-ruleForm">
-            <el-form-item label="编号" prop="id">
-              <el-input v-model="updateForm.id" style="width: 70%"></el-input>
+            <el-form-item label="编号" prop="userId">
+              <el-input v-model="updateForm.userId" style="width: 70%" disabled></el-input>
             </el-form-item>
-            <el-form-item label="姓名" prop="name">
-              <el-input v-model="updateForm.name" style="width: 70%"></el-input>
-            </el-form-item>
-            <el-form-item label="密码" prop="pwd">
-              <el-input v-model="updateForm.pwd" style="width: 70%"></el-input>
+            <el-form-item label="姓名" prop="userName">
+              <el-input v-model="updateForm.userName" style="width: 70%"></el-input>
             </el-form-item>
             <!--            <el-form-item>-->
             <!--              <el-button type="primary" @click="submitForm('ruleForm')">立即添加</el-button>-->
@@ -104,6 +133,37 @@
         </span>
       <span slot="footer" class="dialog-footer">
           <el-button @click="dialogVisible_update = false">取 消</el-button>
+          <el-button type="primary" @click="submitUpdateForm('updateForm')">确 定</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog
+        title="角色定义"
+        :visible.sync="dialogVisible_role"
+        width="500px"
+        @open="openRole()"
+        :before-close="handleClose">
+        <span>
+          <el-checkbox-group v-model="checkbox.currentRoles" >
+            <el-checkbox :label="item"  v-for="item in checkbox.allRoles">{{item}}</el-checkbox>
+          </el-checkbox-group>
+        </span>
+      <span slot="footer" class="dialog-footer">
+          <el-button @click="dialogVisible_role = false">取 消</el-button>
+          <el-button type="primary" @click="submitRoleForm()">确 定</el-button>
+        </span>
+    </el-dialog>
+
+    <el-dialog
+        title="重置密码"
+        :visible.sync="dialogVisible_pwd"
+        width="500px"
+        :before-close="handleClose">
+        <span>
+
+        </span>
+      <span slot="footer" class="dialog-footer">
+          <el-button @click="dialogVisible_pwd = false">取 消</el-button>
           <el-button type="primary" @click="submitUpdateForm('updateForm')">确 定</el-button>
         </span>
     </el-dialog>
@@ -119,19 +179,42 @@ export default {
     openDialog(){
       let _this = this
       _this.updateForm = this.currentRow
-      // Axios({
-      //   method:'get',
-      //   url:'/user/'+this.currentRow.id
-      // }).then(function(resp){
-      //   if (resp.data){
-      //     _this.updateForm = resp.data
-      //   } else {
-      //     alert("访问此页面数据需要登录！")
-      //     _this.$router.push({path:'/login'})
-      //   }
-      // }).catch(err=>{
-      //   alert("获取数据错误！")
-      // })
+    },
+    openRole() {
+      // let _this = this
+      // _this.checkList = []
+      // _this.checkList.push(this.currentRow.roleId)
+      this.checkbox.userId = this.currentRow.userId
+      this.checkbox.currentRoles = []
+      if (!!this.currentRow.roleName) {
+        this.checkbox.currentRoles = this.currentRow.roleName.split(',')
+      }
+    },
+    submitRoleForm(){
+      let _this = this
+      Axios({
+        method: 'post',
+        url: '/user/assignRole',
+        data: this.checkbox
+      }).then(function (resp){
+        if (resp.data.code == "1"){
+          _this.$alert('授权成功！', '提示', {
+            confirmButtonText: '确定',
+            callback: action => {
+              _this.dialogVisible_role = false;
+              location.reload();
+            }
+          });
+        } else {
+          _this.$alert('授权失败！', '提示', {
+            confirmButtonText: '确定',
+            callback: action => {
+              _this.dialogVisible_role = false;
+              location.reload();
+            }
+          });
+        }
+      })
     },
     submitAddForm(formName) {
       this.$refs[formName].validate((valid) => {
@@ -146,7 +229,7 @@ export default {
               _this.$alert('添加成功！', '提示', {
                 confirmButtonText: '确定',
                 callback: action => {
-                  _this.dialogVisible = false;
+                  _this.dialogVisible_add = false;
                   location.reload();
                 }
               });
@@ -170,14 +253,27 @@ export default {
           Axios({
             method:'put',
             url:'/user/update',
-            data:this.updateForm
+            data: {
+              id: this.updateForm.userId,
+              name: this.updateForm.userName
+            },
+            headers: {
+              'Content-Type': "application/json;charset=UTF-8",
+            }
           }).then(function (resp){
             if (resp.data){
               _this.$alert('修改成功！', '提示', {
                 confirmButtonText: '确定',
                 callback: action => {
-                  _this.dialogVisible = false;
+                  _this.dialogVisible_update = false;
                   location.reload();
+                }
+              });
+            } else {
+              _this.$alert('修改失败！', '提示', {
+                confirmButtonText: '确定',
+                callback: action => {
+                  _this.dialogVisible_update = false;
                 }
               });
             }
@@ -266,6 +362,14 @@ export default {
       }).catch(err=>{
         alert("获取数据错误！")
       })
+
+      Axios({
+        method: 'get',
+        url: '/role/roleName'
+      }).then(function(resp){
+        _this.checkbox.allRoles = resp.data
+        console.log(_this.checkbox.allRoles)
+      })
     },
     handleCurrentChange(value){
       this.query.pageNum = value;
@@ -309,7 +413,7 @@ export default {
     return {
       query:{
         pageNum:1,
-        pagesize:3
+        pagesize:5
       },
       pageTotal:0,
       tableData: [],
@@ -317,6 +421,7 @@ export default {
       search: '',
       dialogVisible_add: false,
       dialogVisible_update: false,
+      dialogVisible_pwd : false,
       currentRow:1,
       addForm: {
         id: '',
@@ -324,15 +429,20 @@ export default {
         pwd: ''
       },
       updateForm: {
-        id: '',
-        name: '',
-        pwd: ''
+        userId: '',
+        userName: ''
+      },
+      dialogVisible_role : false,
+      checkbox: {
+        currentRoles: [],
+        allRoles: [],
+        userId: ''
       },
       rules: {
-        id: [
+        userId: [
           { required: true, message: '请输入编号', trigger: 'blur' }
         ],
-        name: [
+        userName: [
           { required: true, message: '请输入姓名', trigger: 'blur' },
           { min: 2, max: 10, message: '长度在 2 到 10 个字符', trigger: 'blur' }
         ],

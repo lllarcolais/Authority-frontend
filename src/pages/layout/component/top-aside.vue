@@ -79,14 +79,20 @@ export default {
         method: 'get',
         url: '/logout'
       }).then(function (resp){
-        if (resp.data) {
-          _this.$store.commit("LOGIN_OUT")
-          alert("登出成功！")
-          _this.$router.push({path:'/login'})
-        } else {
-          alert("登出失败！")
-          _this.$router.push({path:'/login'})
-        }
+        // if (resp.data) {
+        //   _this.$store.commit("LOGIN_OUT")
+        //   alert("登出成功！")
+        //   _this.$router.push({path:'/login'})
+        // } else {
+        //   alert("登出失败！")
+        //   _this.$router.push({path:'/login'})
+        // }
+        _this.$store.commit("LOGIN_OUT")
+        _this.$store.commit("permission/CLEAR_PERMISSION")
+        _this.$store.commit("permission/CLEAR_MENU")
+        alert("登出成功！")
+        _this.$router.replace({path:'/login'})
+        location.reload()
       })
     }
   }
